@@ -67,6 +67,15 @@ st.markdown("""
 
 
 # ============================================================
+# SESSION STATE INIT — preserves results across widget interactions
+# ============================================================
+if 'audit_run' not in st.session_state:
+    st.session_state.audit_run = False
+if 'audit_results' not in st.session_state:
+    st.session_state.audit_results = {}
+
+
+# ============================================================
 # SECTOR BENCHMARKS & STRATEGIES
 # ============================================================
 SECTOR_DATA = {
@@ -724,133 +733,182 @@ if run_audit:
     if weekly_rev == 0:
         st.warning("Add your revenue figure above to get your number.")
     else:
-        annual_recovery = leak_total_weekly * 52
+        # Store everything in session state so widget interactions don't reset the results
+        st.session_state.audit_run = True
+        st.session_state.audit_results = {
+            "annual_recovery": leak_total_weekly * 52,
+            "leak_total_weekly": leak_total_weekly,
+            "leaks": leaks,
+            "deep_dive_flags": deep_dive_flags,
+            "food_cost_ratio": food_cost_ratio,
+            "wage_ratio": wage_ratio,
+            "prime_cost_ratio": prime_cost_ratio,
+            "adjusted_cogs_high": adjusted_cogs_high,
+            "venue_type": venue_type,
+            "sector": sector,
+            "inflation_buffer": inflation_buffer,
+            "wage_split": wage_split,
+            "themed_nights": themed_nights,
+            "themed_sales_pct": themed_sales_pct if themed_nights else 0,
+            "days_operation": days_operation,
+            "platform_leak_weekly": platform_leak_weekly,
+            "labour_hire_weekly": labour_hire_weekly,
+            "contact_name": contact_name,
+            "contact_email": contact_email,
+            "contact_phone": contact_phone,
+            "business_name": business_name,
+            "business_website": business_website,
+        }
 
-        st.markdown("### Your estimated annual profit leakage:")
-        st.markdown(f"<div class='big-number'>${annual_recovery:,.0f}</div>", unsafe_allow_html=True)
-        st.caption("Directional, not exact — but real enough to act on.")
-        st.markdown("")
+if st.session_state.audit_run and st.session_state.audit_results:
+    r = st.session_state.audit_results
+    annual_recovery = r["annual_recovery"]
+    leaks = r["leaks"]
+    deep_dive_flags = r["deep_dive_flags"]
+    food_cost_ratio = r["food_cost_ratio"]
+    wage_ratio = r["wage_ratio"]
+    prime_cost_ratio = r["prime_cost_ratio"]
+    adjusted_cogs_high = r["adjusted_cogs_high"]
+    venue_type = r["venue_type"]
+    sector = r["sector"]
+    inflation_buffer = r["inflation_buffer"]
+    wage_split = r["wage_split"]
+    themed_nights = r["themed_nights"]
+    themed_sales_pct = r["themed_sales_pct"]
+    days_operation = r["days_operation"]
+    platform_leak_weekly = r["platform_leak_weekly"]
+    labour_hire_weekly = r["labour_hire_weekly"]
+    contact_name = r["contact_name"]
+    contact_email = r["contact_email"]
+    contact_phone = r["contact_phone"]
+    business_name = r["business_name"]
+    business_website = r["business_website"]
 
-        # BENCHMARK PANEL
-        st.markdown("---")
-        st.subheader(f"How Your {venue_type} Stacks Up Against 2026 Benchmarks")
+    st.markdown("### Your estimated annual profit leakage:")
+    st.markdown(f"<div class='big-number'>${annual_recovery:,.0f}</div>", unsafe_allow_html=True)
+    st.caption("Directional, not exact — but real enough to act on.")
+    st.markdown("")
 
-        b1, b2, b3 = st.columns(3)
-        with b1:
-            cogs_target = f"{sector['cogs_low']*100:.0f}%–{adjusted_cogs_high*100:.0f}%"
-            cogs_actual = f"{food_cost_ratio*100:.1f}%" if food_cost_ratio > 0 else "Not entered"
-            cogs_status = "🔴" if food_cost_ratio > adjusted_cogs_high else ("🟡" if food_cost_ratio > sector["cogs_low"] else "🟢")
-            st.metric("Food & Bev COGS", cogs_actual, f"Target: {cogs_target}")
-            st.caption(f"{cogs_status} Benchmark (incl. {inflation_buffer}% pressure): {cogs_target}")
-        with b2:
-            wage_target = f"{sector['wage_low']*100:.0f}%–{sector['wage_high']*100:.0f}%"
-            wage_actual = f"{wage_ratio*100:.1f}%" if wage_ratio > 0 else "Not entered"
-            wage_status = "🔴" if wage_ratio > sector["wage_high"] else ("🟡" if wage_ratio > sector["wage_low"] else "🟢")
-            st.metric("Wage %", wage_actual, f"Target: {wage_target}")
-            st.caption(f"{wage_status} Benchmark: {wage_target}")
-        with b3:
-            prime_target = f"{sector['prime_low']*100:.0f}%–{sector['prime_high']*100:.0f}%"
-            prime_actual = f"{prime_cost_ratio*100:.1f}%" if prime_cost_ratio > 0 else "Not entered"
-            prime_status = "🔴" if prime_cost_ratio > sector["prime_high"] else ("🟡" if prime_cost_ratio > sector["prime_low"] else "🟢")
-            st.metric("Prime Cost", prime_actual, f"Target: {prime_target}")
-            st.caption(f"{prime_status} Benchmark: {prime_target}")
+    # BENCHMARK PANEL
+    st.markdown("---")
+    st.subheader(f"How Your {venue_type} Stacks Up Against 2026 Benchmarks")
 
+    b1, b2, b3 = st.columns(3)
+    with b1:
+        cogs_target = f"{sector['cogs_low']*100:.0f}%–{adjusted_cogs_high*100:.0f}%"
+        cogs_actual = f"{food_cost_ratio*100:.1f}%" if food_cost_ratio > 0 else "Not entered"
+        cogs_status = "🔴" if food_cost_ratio > adjusted_cogs_high else ("🟡" if food_cost_ratio > sector["cogs_low"] else "🟢")
+        st.metric("Food & Bev COGS", cogs_actual, f"Target: {cogs_target}")
+        st.caption(f"{cogs_status} Benchmark (incl. {inflation_buffer}% pressure): {cogs_target}")
+    with b2:
+        wage_target = f"{sector['wage_low']*100:.0f}%–{sector['wage_high']*100:.0f}%"
+        wage_actual = f"{wage_ratio*100:.1f}%" if wage_ratio > 0 else "Not entered"
+        wage_status = "🔴" if wage_ratio > sector["wage_high"] else ("🟡" if wage_ratio > sector["wage_low"] else "🟢")
+        st.metric("Wage %", wage_actual, f"Target: {wage_target}")
+        st.caption(f"{wage_status} Benchmark: {wage_target}")
+    with b3:
+        prime_target = f"{sector['prime_low']*100:.0f}%–{sector['prime_high']*100:.0f}%"
+        prime_actual = f"{prime_cost_ratio*100:.1f}%" if prime_cost_ratio > 0 else "Not entered"
+        prime_status = "🔴" if prime_cost_ratio > sector["prime_high"] else ("🟡" if prime_cost_ratio > sector["prime_low"] else "🟢")
+        st.metric("Prime Cost", prime_actual, f"Target: {prime_target}")
+        st.caption(f"{prime_status} Benchmark: {prime_target}")
+
+    st.markdown(f"""
+    <div class='benchmark-box'>
+        <strong>Top 2026 cost leak for {venue_type} operators:</strong> {sector['top_leak']}
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Revenue concentration warning (themed nights)
+    if themed_nights and themed_sales_pct >= 60:
+        other_nights = len(days_operation) - 1 if days_operation else 5
         st.markdown(f"""
-        <div class='benchmark-box'>
-            <strong>Top 2026 cost leak for {venue_type} operators:</strong> {sector['top_leak']}
+        <div class='warning-box'>
+            <strong>⚠️ Revenue Concentration Alert</strong><br>
+            Your themed nights account for {themed_sales_pct}% of weekly revenue.
+            That means your other {other_nights} trading days are generating only {100-themed_sales_pct}% of your income combined.
+            When your most profitable night was making $30k and the rest of the week contributes $5k — that's not a well-run business, that's a one-trick operation with expensive overheads.
         </div>
         """, unsafe_allow_html=True)
 
-        # Revenue concentration warning (themed nights)
-        if themed_nights and themed_sales_pct >= 60 and weekly_rev > 0:
-            other_nights = len(days_operation) - 1 if days_operation else 5
-            st.markdown(f"""
-            <div class='warning-box'>
-                <strong>⚠️ Revenue Concentration Alert</strong><br>
-                Your themed nights account for {themed_sales_pct}% of weekly revenue.
-                That means your other {other_nights} trading days are generating only {100-themed_sales_pct}% of your income combined.
-                When your most profitable night was making $30k and the rest of the week contributes $5k — that's not a well-run business, that's a one-trick operation with expensive overheads.
-            </div>
-            """, unsafe_allow_html=True)
+    st.divider()
 
-        st.divider()
+    # LEAK REPORT
+    st.subheader("Your Free Report: Where the Money is Going")
+    st.markdown("Ranked by estimated weekly impact. Suggestions only — your venue is yours to run.")
 
-        # LEAK REPORT
-        st.subheader("Your Free Report: Where the Money is Going")
-        st.markdown("Ranked by estimated weekly impact. Suggestions only — your venue is yours to run.")
+    for i, leak in enumerate(sorted(leaks, key=lambda x: x["amount"], reverse=True), 1):
+        st.markdown(f"""
+        <div class='leak-item'>
+            <strong>#{i} — {leak['label']}</strong><br>
+            Weekly: <strong>${leak['amount']:,.0f}</strong> &nbsp;|&nbsp; Annual: <strong>${leak['amount']*52:,.0f}</strong><br>
+            <span style='color:#555'>{leak['note']}</span>
+        </div>
+        """, unsafe_allow_html=True)
+        st.caption(f"💡 One place to start: {leak['fix']}")
+        if leak.get("psychosocial"):
+            st.markdown(f"<div class='psychosocial-box'>⚠️ <strong>Beyond the invoice:</strong> {leak['psychosocial']}</div>", unsafe_allow_html=True)
 
-        for i, leak in enumerate(sorted(leaks, key=lambda x: x["amount"], reverse=True), 1):
-            st.markdown(f"""
-            <div class='leak-item'>
-                <strong>#{i} — {leak['label']}</strong><br>
-                Weekly: <strong>${leak['amount']:,.0f}</strong> &nbsp;|&nbsp; Annual: <strong>${leak['amount']*52:,.0f}</strong><br>
-                <span style='color:#555'>{leak['note']}</span>
-            </div>
-            """, unsafe_allow_html=True)
-            st.caption(f"💡 One place to start: {leak['fix']}")
-            if leak.get("psychosocial"):
-                st.markdown(f"<div class='psychosocial-box'>⚠️ <strong>Beyond the invoice:</strong> {leak['psychosocial']}</div>", unsafe_allow_html=True)
+    # Deep dive flags (non-dollar observations)
+    if deep_dive_flags:
+        st.markdown("---")
+        st.markdown("**📋 Additional Observations**")
+        for flag in deep_dive_flags:
+            if flag["type"] == "warning":
+                st.warning(flag["message"])
+            elif flag["type"] == "info":
+                st.info(flag["message"])
 
-        # Deep dive flags (non-dollar observations)
-        if deep_dive_flags:
-            st.markdown("---")
-            st.markdown("**📋 Additional Observations**")
-            for flag in deep_dive_flags:
-                if flag["type"] == "warning":
-                    st.warning(flag["message"])
-                elif flag["type"] == "info":
-                    st.info(flag["message"])
+    if wage_split == "No — it's one number":
+        st.info("📌 Kitchen wages estimated at 45% of total wage bill. Separating these will sharpen your picture.")
 
-        if wage_split == "No — it's one number":
-            st.info("📌 Kitchen wages estimated at 45% of total wage bill. Separating these will sharpen your picture.")
+    # 2026 STRATEGIES
+    st.divider()
+    st.subheader(f"2026 Strategies for {venue_type} Operators")
+    for s in sector["strategies"]:
+        st.markdown(f"<div class='strategy-box'><strong>💡 {s['name']}</strong><br>{s['detail']}</div>", unsafe_allow_html=True)
 
-        # 2026 STRATEGIES
-        st.divider()
-        st.subheader(f"2026 Strategies for {venue_type} Operators")
-        for s in sector["strategies"]:
-            st.markdown(f"<div class='strategy-box'><strong>💡 {s['name']}</strong><br>{s['detail']}</div>", unsafe_allow_html=True)
+    st.divider()
 
-        st.divider()
+    # PREFILLED CTA
+    st.subheader("Want to Go Deeper?")
+    st.markdown("<p class='prefill-note'>Details pre-filled from above. Correct anything before submitting.</p>", unsafe_allow_html=True)
+    cf1, cf2 = st.columns(2)
+    with cf1:
+        cta_name = st.text_input("Your name ", value=contact_name)
+        cta_email = st.text_input("Email address ", value=contact_email)
+        cta_phone = st.text_input("Contact phone ", value=contact_phone)
+    with cf2:
+        cta_business = st.text_input("Business name ", value=business_name)
+        st.text_input("Website ", value=business_website)
+        st.text_area("Anything specific you want to cover?",
+            placeholder="e.g. struggling most with staffing costs and delivery platform margins...")
 
-        # PREFILLED CTA
-        st.subheader("Want to Go Deeper?")
-        st.markdown("<p class='prefill-note'>Details pre-filled from above. Correct anything before submitting.</p>", unsafe_allow_html=True)
-        cf1, cf2 = st.columns(2)
-        with cf1:
-            cta_name = st.text_input("Your name ", value=contact_name)
-            cta_email = st.text_input("Email address ", value=contact_email)
-            cta_phone = st.text_input("Contact phone ", value=contact_phone)
-        with cf2:
-            cta_business = st.text_input("Business name ", value=business_name)
-            st.text_input("Website ", value=business_website)
-            st.text_area("Anything specific you want to cover?",
-                placeholder="e.g. struggling most with staffing costs and delivery platform margins...")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.link_button("👥 Join the Free Group Sessions", "https://hospitalitysolutions.com.au/")
+    with col_b:
+        st.link_button("📞 Book a Direct Conversation", "https://hospitalitysolutions.com.au/")
 
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.link_button("👥 Join the Free Group Sessions", "https://hospitalitysolutions.com.au/")
-        with col_b:
-            st.link_button("📞 Book a Direct Conversation", "https://hospitalitysolutions.com.au/")
+    st.caption("Hospitality Solutions WA · hospitalitysolutions.com.au")
+    st.divider()
 
-        st.caption("Hospitality Solutions WA · hospitalitysolutions.com.au")
-        st.divider()
-
-        # FOUNDING 250
-        st.markdown("<div class='founding-box'>", unsafe_allow_html=True)
-        st.markdown("#### You're one of the first 250 people to use this.")
-        st.markdown("""
-        This tool was built on experience, not a survey. Spend 90 seconds telling us what it missed or got wrong and we'll give you **four weeks of free group drop-in sessions** plus access to an AI assistant built on 20+ years of hospitality operations experience. No charge. No obligation.
-        """)
-        provide_feedback = st.toggle("Yes — I'll share feedback and claim my 4 weeks access")
-        if provide_feedback:
-            name_display = contact_name
-            st.success(f"Thank you{', ' + name_display if name_display else ''}. You'll hear from us within 24 hours.")
-            st.text_area("What did this tool miss?", placeholder="e.g. seasonal swings, rostering complexity...")
-            st.text_area("What felt inaccurate?", placeholder="e.g. the agency cost estimate felt off...")
-            st.text_area("What question should have been asked?", placeholder="e.g. 'Do you have a head chef or are you cooking yourself?'")
-            st.selectbox("State / Territory", ["WA", "NSW", "VIC", "QLD", "SA", "TAS", "ACT", "NT"])
-            if st.button("Submit My Feedback"):
-                st.balloons()
-                st.success("Received. Watch your inbox — thank you for making this better.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        st.caption("Version 2 — Built by someone who's worked the floor, not just studied it.")
+    # FOUNDING 250
+    st.markdown("<div class='founding-box'>", unsafe_allow_html=True)
+    st.markdown("#### You're one of the first 250 people to use this.")
+    st.markdown("""
+    This tool was built on experience, not a survey. Spend 90 seconds telling us what it missed or got wrong and we'll give you **four weeks of free group drop-in sessions** plus access to an AI assistant built on 20+ years of hospitality operations experience. No charge. No obligation.
+    """)
+    provide_feedback = st.toggle("Yes — I'll share feedback and claim my 4 weeks access")
+    if provide_feedback:
+        name_display = contact_name
+        st.success(f"Thank you{', ' + name_display if name_display else ''}. You'll hear from us within 24 hours.")
+        st.text_area("What did this tool miss?", placeholder="e.g. seasonal swings, rostering complexity...")
+        st.text_area("What felt inaccurate?", placeholder="e.g. the agency cost estimate felt off...")
+        st.text_area("What question should have been asked?", placeholder="e.g. 'Do you have a head chef or are you cooking yourself?'")
+        st.selectbox("State / Territory", ["WA", "NSW", "VIC", "QLD", "SA", "TAS", "ACT", "NT"])
+        if st.button("Submit My Feedback"):
+            st.balloons()
+            st.success("Received. Watch your inbox — thank you for making this better.")
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.caption("Version 2 — Built by someone who's worked the floor, not just studied it.")
